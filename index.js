@@ -27,6 +27,29 @@ app.get('/api/productos', async (req, res) => {
   }
 });
 
+// Endpoint clientes
+app.get('/api/clientes', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM clientes');
+    res.json(r.rows);
+  } catch (e) {
+    console.error('Error en /api/clientes:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Endpoint ordenes
+app.get('/api/ordenes', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM ordenes');
+    res.json(r.rows);
+  } catch (e) {
+    console.error('Error en /api/ordenes:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
 // ✅ Endpoint para comprobar tablas en Render
 app.get('/api/check-tables', async (req, res) => {
   try {
