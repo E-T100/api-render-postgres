@@ -16,56 +16,52 @@ app.get('/', (req, res) => {
   res.json({ ok: true, mensaje: 'API funcionando en Render' });
 });
 
-// Endpoint productos
+// Productos
 app.get('/api/productos', async (req, res) => {
   try {
     const r = await pool.query('SELECT * FROM productos');
     res.json(r.rows);
   } catch (e) {
-    console.error('Error en /api/productos:', e);
     res.status(500).json({ error: e.message });
   }
 });
 
-// Endpoint clientes
+// Clientes
 app.get('/api/clientes', async (req, res) => {
   try {
     const r = await pool.query('SELECT * FROM clientes');
     res.json(r.rows);
   } catch (e) {
-    console.error('Error en /api/clientes:', e);
     res.status(500).json({ error: e.message });
   }
 });
 
-// Endpoint ordenes
+// Órdenes
 app.get('/api/ordenes', async (req, res) => {
   try {
     const r = await pool.query('SELECT * FROM ordenes');
     res.json(r.rows);
   } catch (e) {
-    console.error('Error en /api/ordenes:', e);
     res.status(500).json({ error: e.message });
   }
 });
 
-
-// ✅ Endpoint para comprobar tablas en Render
+// Check tables
 app.get('/api/check-tables', async (req, res) => {
   try {
-    const result = await pool.query(`
+    const r = await pool.query(`
       SELECT table_name
       FROM information_schema.tables
-      WHERE table_schema = 'public'
-      ORDER BY table_name;
+      WHERE table_schema='public'
+      ORDER BY table_name
     `);
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.json(r.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
-// ✅ Siempre al final
+// SIEMPRE AL FINAL
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`API escuchando en puerto ${PORT}`);
