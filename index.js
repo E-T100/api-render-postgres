@@ -62,86 +62,117 @@ app.get("/api/ordenes", async (req, res) => {
   }
 });
 
-/* =========================
-   POST: PRODUCTOS / CLIENTES / ORDENES
-========================= */
-
-// POST /api/productos
+// =========================
+// POST: Crear PRODUCTO
 // Body esperado: { nombre, descripcion?, precio, stock, id_categoria? }
+// =========================
 app.post("/api/productos", async (req, res) => {
   try {
-    const { nombre, descripcion = null, precio, stock, id_categoria = null } =
-      req.body;
+    const { nombre, descripcion, precio, stock, id_categoria } = req.body;
 
-    // Validaciones mínimas (según NOT NULL)
+    // Validaciones mínimas según tus columnas:
+    // nombre (NOT NULL), precio (NOT NULL), stock (NOT NULL)
     if (!nombre || precio === undefined || stock === undefined) {
       return res.status(400).json({
-        error:
-          "Faltan campos obligatorios: nombre, precio, stock (descripcion e id_categoria son opcionales).",
+        error: "Faltan campos requeridos: nombre, precio, stock",
       });
     }
 
-    const r = await pool.query(
-      `INSERT INTO productos (nombre, descripcion, precio, stock, id_categoria)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *;`,
-      [nombre, descripcion, precio, stock, id_categoria]
-    );
+    const q = `
+      INSERT INTO productos (nombre, descripcion, precio, stock, id_categoria)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *;
+    `;
+    const values = [
+      nombre,
+      descripcion ?? null,
+      precio,
+      stock,
+      id_categoria ?? null,
+    ];
 
+    const r = await pool.query(q, values);
     res.status(201).json(r.rows[0]);
-  } catch (err) {
-    return handleError(res, "/api/productos [POST]", err);
+  } catch (e) {
+    console.error("Error en POST /api/productos:", e.message);
+    res.status(500).json({ error: e.message });
   }
 });
 
-// POST /api/clientes
+// =========================
+// POST: Crear CLIENTE
 // Body esperado: { nombre, email?, direccion?, telefono? }
+// =========================
 app.post("/api/clientes", async (req, res) => {
   try {
-    const { nombre, email = null, direccion = null, telefono = null } = req.body;
+    const { nombre, email, direccion, telefono } = req.body;
 
+    // En tu tabla: nombre es NOT NULL; email/direccion/telefono pueden ser null
     if (!nombre) {
       return res.status(400).json({
-        error: "Falta campo obligatorio: nombre (email, direccion, telefono son opcionales).",
+        error: "Falta campo requerido: nombre",
       });
     }
 
-    // Nota: email es UNIQUE, así que si mandas un email repetido va a fallar.
-    const r = await pool.query(
-      `INSERT INTO clientes (nombre, email, direccion, telefono)
-       VALUES ($1, $2, $3, $4)
-       RETURNING *;`,
-      [nombre, email, direccion, telefono]
-    );
+    const q = `
+      INSERT INTO clientes (nombre, email, direccion, telefono)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *;
+    `;
+    const values = [
+      nombre,
+      email ?? null,
+      direccion ?? null,
+      telefono ?? null,
+    ];
 
+    const r = await pool.query(q, values);
     res.status(201).json(r.rows[0]);
-  } catch (err) {
-    return handleError(res, "/api/clientes [POST]", err);
+  } catch (e) {
+    // Si email tiene UNIQUE, aquí caerá cuando repitas email
+    console.error("Error en POST /api/clientes:", e.message);
+    res.status(500).json({ error: e.message });
   }
 });
 
-// POST /api/ordenes
-// Body esperado: { tipo_orden, id_cliente? }
+// =========================
+// POST: Crear ORDEN
+// Body esperado: { tipo_orden, id_cliente }
+// =========================
 app.post("/api/ordenes", async (req, res) => {
   try {
-    const { tipo_orden, id_cliente = null } = req.body;
+    const { tipo_orden, id_cliente } = req.body;
 
+    // En tu tabla: tipo_orden es NOT NULL
     if (!tipo_orden) {
-      return res.status(400).json({
-        error: "Falta campo obligatorio: tipo_orden (id_cliente es opcional).",
-      });
+      return res.status(400).json({ error: "Falta campo requerido: tipo_orden" });
     }
 
-    const r = await pool.query(
-      `INSERT INTO ordenes (tipo_orden, id_cliente)
-       VALUES ($1, $2)
-       RETURNING *;`,
-      [tipo_orden, id_cliente]
-    );
+    // id_cliente es nullable, pero si lo mandas debe existir el cliente (FK)
+    if (id_cliente !== undefined && id_cliente !== null) {
+      const check = await pool.query(
+        "SELECT 1 FROM clientes WHERE id_cliente = $1",
+        [id_cliente]
+      );
+      if (check.rowCount === 0) {
+        return res.status(400).json({
+          error: "id_cliente no existe en clientes (violación de FK)",
+        });
+      }
+    }
 
+    const q = `
+      INSERT INTO ordenes (tipo_orden, id_cliente)
+      VALUES ($1, $2)
+      RETURNING *;
+    `;
+    const values = [tipo_orden, id_cliente ?? null];
+
+    const r = await pool.query(q, values);
     res.status(201).json(r.rows[0]);
-  } catch (err) {
-    return handleError(res, "/api/ordenes [POST]", err);
+  } catch (e) {
+    console.error("Error en POST /api/ordenes:", e.message);
+    res.status(500).json({ error: e.message });
   }
 });
 
